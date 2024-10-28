@@ -1,0 +1,27 @@
+{
+    "activate_fn": "silu",
+    "architectures": [
+        "CPMDragonflyForCausalLM"
+    ],
+    "dim_ff": 3840,
+    "dim_head": 128,
+    "dim_model": 1536,
+    "dim_model_base": 256,
+    "dropout_p": 0.0,
+    "eps": 1e-05,
+    "ffn_gated": true,
+    "flash_attn_mask_shape": "2d",
+    "half_type": "bf16",
+    "init_std": 0.1,
+    "model_type": "cpm",
+    "num_heads": 12,
+    "num_kv_heads": 12,
+    "num_layers": 4,
+    "qk_norm": false,
+    "scale": true,
+    "scale_depth": 1.4,
+    "scale_emb": 12,
+    "tie_lm_head": true,
+    "use_flash_attn": true,
+    "vocab_size": 122753
+}

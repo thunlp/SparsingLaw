@@ -1,0 +1,13 @@
+{
+    "pretrain": {
+        "batch_size": 2,
+        "glb_batch_size": 576,
+        "glb_batch_token": 2359296,
+        "lr": 0.01,
+        "max_length": 4096,
+        "n_gpu": 288,
+        "n_node": 36,
+        "total_token": 48841159680.0,
+        "train_iters": 20701
+    }
+}

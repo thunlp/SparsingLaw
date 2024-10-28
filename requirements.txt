@@ -1,0 +1,4 @@
+bmtrain
+flash-attn==2.4.1
+torch==1.13.1
+transformers==4.28.0

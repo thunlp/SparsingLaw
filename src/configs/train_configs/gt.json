@@ -1,0 +1,8 @@
+{
+    "pretrain": {
+        "train_iters": 8900, 
+        "batch_size": 24,
+        "max_length": 4096,
+        "lr": 1e-2
+    }
+}

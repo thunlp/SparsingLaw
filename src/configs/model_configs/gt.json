@@ -1,0 +1,27 @@
+{
+    "vocab_size": 122753,
+    "dropout_p": 0.0,
+    "eps": 1e-05,
+    "half_type": "bf16",
+    "use_flash_attn": true,
+    "flash_attn_mask_shape": "2d",
+    "dim_model": 2304,
+    "dim_ff": 5760,
+    "dim_head": 128,
+    "num_heads": 18,
+    "num_kv_heads": 18,
+    "num_layers": 40,
+    "activate_fn": "silu",
+    "init_std": 0.10,
+    "scale": true,
+    "scale_emb": 12,
+    "scale_depth": 1.4,
+    "dim_model_base": 256,
+    "model_type": "cpm",
+    "architectures": [
+        "CPMDragonflyForCausalLM"
+    ],
+    "qk_norm": false,
+    "tie_lm_head": true,
+    "ffn_gated": true
+}
