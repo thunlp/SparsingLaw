@@ -26,18 +26,51 @@ To run scripts, first copy the `*.sh` files to the `src` directory. Then, set th
 
 ### Calculate sparsity of a single checkpoint
 
+Required environment variables:
+- `dataset`: The name of the dataset.
+- `model`: The name of the model (e.g. "0.1b_relu").
+- `load_path`: The path to the model checkpoint folder.
+- `tokenizer_path`: The path to the tokenizer file.
+- `prune_strategy`: Must be one of the following:
+    - "fat": Corresponding to FAT-eps sparsity.
+    - "topk": Corresponding to Top-k sparsity.
+    - "cett": Corresponding to PPL-k% sparsity.
+- `prune_arg`: A float value representing:
+    - Epsilon for "fat".
+    - Ratio of activated neurons in each layer for "topk", which means the value of k in Top-k equals `prune_arg * dim_feedforward`.
+    - CETT value for "cett".
+
+Command:
 ```
 bash run_inspect.sh
 ```
 
 ### Calculate PPL-k% sparsities of all checkpoints during pre-training
 
+Required environment variables:
+- `dataset`: The name of the dataset.
+- `model`: The name of the model (e.g. "0.1b_relu").
+- `tokenizer_path`: The path to the tokenizer file.
+- `save_path`: The path to where the checkpoints are saved.
+- `target_ppl_ratio`: 1 + k% for PPL-k% sparsity (e.g. target_ppl_ratio=1.01 for PPL-1% sparsity).
+
+You should enter the list of checkpoints that need to be computed into `get_ckpt_list.sh` in advance.
+
+Command:
 ```
 bash calc_sparsity.sh
 ```
 
 ### Calculate the thresholds of each layer for evaluation
 
+Required environment variables:
+- `dataset`: The name of the dataset.
+- `model`: The name of the model (e.g. "0.1b_relu").
+- `load_path`: The path to the model checkpoint folder.
+- `tokenizer_path`: The path to the tokenizer file.
+- `target_ppl_ratio`: 1 + k% for PPL-k% sparsity (e.g. target_ppl_ratio=1.01 for PPL-1% sparsity).
+
+Command:
 ```
 bash calc_threshold_for_each_layer.sh
 ```
