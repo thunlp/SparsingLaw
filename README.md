@@ -9,7 +9,7 @@ The open-source materials for paper *Sparsing Law: Towards Large Language Models
 [Paper Abstract](#paper-abstract)  
 [Repository Overview](#repository-overview)  
 [Requirements](#requirements)  
-[Sparsity Metrics](#sparsity-metrics)
+[Sparsity Metrics](#sparsity-metrics)  
 [Evaluation](#evaluation)
 
 ## Paper Abstract
@@ -110,7 +110,9 @@ bash calc_threshold_for_each_layer.sh
 
 ### Evaluation with UltraEval
 
-We use [UltraEval](https://github.com/OpenBMB/UltraEval) to evaluate our models. To support inference under PPL-$`p\%`$ sparsity setting during evaluation, we modify the forward code in the `FFNBlock` as shown below. Note that the environment variable `thresholds` is obtained in the previous step with `calc_threshold_for_each_layer.sh`.
+We use the `sparsing_law` branch of [UltraEval](https://github.com/OpenBMB/UltraEval/tree/sparsing_law) to evaluate our models. Remember to checkout to this branch rather than `main`.
+
+To support inference under PPL-$`p\%`$ sparsity setting during evaluation, the `FFNBlock` in the Huggingface codes of the model architecture should be modified as shown below. Note that the environment variable `thresholds` is obtained in the previous step with `calc_threshold_for_each_layer.sh`, and `mode` is set to `sparse` for all PPL-$`p\%`$ settings.
 
 ```python
 def forward(self, x: torch.Tensor): 
@@ -128,3 +130,11 @@ def forward(self, x: torch.Tensor):
     
     return down_proj
 ```
+
+After appropriately setting the above two environment variables, just run the following codes for evaluation:
+```
+bash eval_entrance.sh /path/to/the/huggingface/model/ 8 piqa,siqa,hellaswag,winogrande,copa,boolq,agieval ppl
+bash eval_entrance.sh /path/to/the/huggingface/model/ 8 humaneval,mbpp,lambada,tydiqa,gsm8k,mmlu,bbh gen
+```
+
+Finally, you can obtain the evaluation results under `/path/to/the/huggingface/model/eval_results/`.
