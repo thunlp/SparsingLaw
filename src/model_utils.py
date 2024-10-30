@@ -4,21 +4,21 @@
 # Copyright (c) THUNLP, Tsinghua University. All rights reserved.
 # See LICENSE file in the project root for license information.
 
-import os
 import types
 import torch
-import numpy as np
 import bmtrain as bmt
 
 from typing import Dict
 from torch import Tensor
 from cpm.dragonfly.modeling_dragonfly import Dragonfly, DragonflyConfig, NormalLinear, DenseGatedACT
 
+
 def prune_fat(x: Tensor, eps: float):
     mask = x.float().abs() < (eps + 1e-18)
     sparsity = mask.float().mean()
     x[mask] = 0.
     return x, sparsity
+
 
 def prune_topk(x: Tensor, k: float):
     num_to_zero = int(x.numel() * (1 - k))
@@ -31,6 +31,7 @@ def prune_topk(x: Tensor, k: float):
     flat_abs_x = flat_x.abs()
     bmt.print_rank('threshold = {:.3e}'.format(flat_abs_x[flat_abs_x > 1e-18].min()))
     return flat_x.view_as(x), (flat_abs_x < 1e-18).float().mean()
+
 
 class SparseDragonfly(Dragonfly):
     def __init__(self, config: DragonflyConfig):

@@ -5,17 +5,13 @@
 # See LICENSE file in the project root for license information.
 
 import os
-import time
 import torch
 import argparse
 import bmtrain as bmt
 
-from cpm.dragonfly.training_tasks.pretrain_indexed import MixedIndexedDataset
-
 from math import exp
 from torch import Tensor
-from collections import defaultdict
-from typing import Iterable, Dict, Tuple
+from typing import Iterable
 
 from model_utils import SparseDragonfly
 from init_utils import get_dataset, get_tokenizer, get_model, get_train_args, get_valid_dataset
