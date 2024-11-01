@@ -83,7 +83,7 @@ In addition to the information mentioned in the previous subsection, the thresho
 
 ### Sample
 
-The results of three different sparsity metric methods on the sample text are shown in the figure below.
+The resulting activation rates within our 0.8b ReLU model, using three different sparsity metrics on the sample text, are shown in the figure below.
 
 ![](figs/sample.jpg)
 
