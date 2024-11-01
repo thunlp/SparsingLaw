@@ -8,7 +8,6 @@ from torch import Tensor
 from typing import Dict, List
 from transformers import AutoTokenizer
 from model_utils import SparseMiniCPMForCausalLM
-from matplotlib.colors import LinearSegmentedColormap
 
 def calc_cett_for_target_ppl_ratio(
     model: SparseMiniCPMForCausalLM,
@@ -91,6 +90,7 @@ def inspect_model(
 
 def draw(act_data: Tensor, tokens: List[str], setting: str):
     import matplotlib.pyplot as plt
+    from matplotlib.colors import LinearSegmentedColormap
     assert act_data.dim() == 3
     nl, bs, n = act_data.size()
     assert bs == 1
