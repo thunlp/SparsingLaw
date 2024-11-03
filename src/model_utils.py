@@ -56,7 +56,7 @@ class SparseMiniCPMForCausalLM(MiniCPMForCausalLM):
                         self.intermedia[lid] = x.clone().detach()
 
                     if self.sparse_activate:
-                        if self.prune_strategy == 'pplk' or self.prune_strategy == 'cett':
+                        if self.prune_strategy == 'pplp' or self.prune_strategy == 'cett':
                             assert lid in self.neuron_thresholds_by_layer, "Please call `set_thresholds` firstly."
                             mask = x.abs() < self.neuron_thresholds_by_layer[lid] # bs, n, dim_ff
                         elif self.prune_strategy == 'topk':

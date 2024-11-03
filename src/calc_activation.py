@@ -13,7 +13,7 @@ def calc_cett_for_target_ppl_ratio(
     model: SparseMiniCPMForCausalLM,
     inputs: Dict,
 ) -> float:
-    assert model.prune_strategy == 'pplk'
+    assert model.prune_strategy == 'pplp'
     target_ppl_ratio = model.prune_arg
 
     # temporarily change to 'cett' for binary search
@@ -31,7 +31,7 @@ def calc_cett_for_target_ppl_ratio(
         else:
             cett_upper = cett
 
-    model.prune_strategy = 'pplk'
+    model.prune_strategy = 'pplp'
     model.prune_arg = target_ppl_ratio
     return (cett_lower + cett_upper) / 2
 
@@ -56,7 +56,7 @@ def inspect_model(
         - A Tensor of size (num_layers, batch_size, seq_len) represents the neuron activation rates,
         - A float value represents the PPL ratio.
     """
-    if model.prune_strategy == 'pplk':
+    if model.prune_strategy == 'pplp':
         cett = calc_cett_for_target_ppl_ratio(model, inputs)
         target_ppl_ratio = model.prune_arg
 
@@ -64,7 +64,7 @@ def inspect_model(
         model.prune_strategy = 'cett'
         model.prune_arg = cett
         ret = inspect_model(model, inputs)
-        model.prune_strategy = 'pplk'
+        model.prune_strategy = 'pplp'
         model.prune_arg = target_ppl_ratio
         return ret
 

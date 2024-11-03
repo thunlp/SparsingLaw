@@ -1,6 +1,6 @@
 model_path="/home/test/test06/lyq/checkpoints/0.8b_relu/480000"
 input_file="input.txt"
-#prune_strategy="pplk"
+#prune_strategy="pplp"
 #prune_arg="1.05"
 prune_strategy="topk"
 prune_arg="0.05"
