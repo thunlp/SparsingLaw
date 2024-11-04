@@ -41,7 +41,7 @@ def inspect_model(
     print_thresholds_list: bool = True,
 ):
     """
-    Calculate the neuron activation rates for each token by layer and compute the increase in perplexity (PPL ratio)
+    Calculate the neuron activation ratios for each token by layer and compute the increase in perplexity (PPL ratio)
     for the provided input data. The analysis is conducted based on the model's pruning strategy 
     (`model.prune_strategy`) and pruning parameter (`model.prune_arg`).
 
@@ -53,7 +53,7 @@ def inspect_model(
     - 1 + p% for PPL-p% sparsity (e.g. prune_arg=1.01 for PPL-1% sparsity).
 
     Returns:
-        - A Tensor of size (num_layers, batch_size, seq_len) represents the neuron activation rates,
+        - A Tensor of size (num_layers, batch_size, seq_len) represents the neuron activation ratios,
         - A float value represents the PPL ratio.
     """
     if model.prune_strategy == 'pplp':
@@ -109,7 +109,7 @@ def draw(act_data: Tensor, tokens: List[str], setting: str):
     ax.set_xticks(np.arange(len(tokens)) + 0.5)
     ax.set_xticklabels(tokens, rotation=65, fontsize=7, ha='right')
 
-    ax.set_title(f'Neuron Activation Rate of Tokens by Each Layer\nsetting: {setting}')
+    ax.set_title(f'Neuron Activation Ratios of Tokens by Each Layer\nsetting: {setting}')
     ax.set_xlabel('Token')
     ax.set_ylabel('Index of Layer')
 

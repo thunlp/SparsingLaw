@@ -83,7 +83,7 @@ bash calc_activation.sh
 
 ### Sample
 
-The resulting activation rates within our 0.8B ReLU-activated model, using three different sparsity metrics on the sample text, are shown in the figure below.
+The resulting activation ratios within our 0.8B ReLU-activated model, using three different sparsity metrics on the sample text, are shown in the figure below.
 
 ![](figs/sample.jpg)
 
