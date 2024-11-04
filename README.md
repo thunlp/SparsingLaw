@@ -27,7 +27,7 @@ Finally, at similar width-depth ratios, we surprisingly find that the limit valu
 
 To enhance the reproducibility of our work, in this Github repository, we open-source the following materials:
 
-- The pre-trained checkpoints (before the decay stage) mentioned in our paper, with five different scales (i.e., 0.1B, 0.2B, 0.4B, 0.8B, and 1.2B) as well as 2 distinct activation functions (i.e., ReLU and SiLU). These checkpoints are most frequently used in our experimental analyses. You can download them on [Huggingface](TODO).
+- The pre-trained checkpoints (before the decay stage) mentioned in our paper, with five different scales (i.e., 0.1B, 0.2B, 0.4B, 0.8B, and 1.2B) as well as 2 distinct activation functions (i.e., ReLU and SiLU). These checkpoints are most frequently used in our experimental analyses. You can download them on [Huggingface](https://huggingface.co/SparseLLM).
 
 - The codes for applying different sparsity metrics, including Top-$`k`$, FAT-$`\epsilon`$, and PPL-$`p\%`$ to pre-trained checkpoints. As it is not convenient for us to open-source the datasets, we provide corresponding demos to evaluate the sparsity level on an input toy dataset.
 
