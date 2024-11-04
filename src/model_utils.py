@@ -1,23 +1,16 @@
-# This file contains the implementation of the sparsified model, including functions for calculating sparsity under three settings: CETT, FAT, and Top-k. It also implements sparse inference.
-# Author: Luo Yuqi
-# Date: 2024-10
-# Copyright (c) THUNLP, Tsinghua University. All rights reserved.
-# See LICENSE file in the project root for license information.
-
+import os
 import types
 import torch
-import bmtrain as bmt
 
-from typing import Dict
 from torch import Tensor
-from cpm.dragonfly.modeling_dragonfly import Dragonfly, DragonflyConfig, NormalLinear, DenseGatedACT
+from typing import Dict, List
 
+from model import MiniCPMForCausalLM, MiniCPMConfig
+from model.modeling_minicpm import VanillaMLP
 
 def prune_fat(x: Tensor, eps: float):
     mask = x.float().abs() < (eps + 1e-18)
-    sparsity = mask.float().mean()
-    x[mask] = 0.
-    return x, sparsity
+    return mask
 
 
 def prune_topk(x: Tensor, k: float):
@@ -26,120 +19,91 @@ def prune_topk(x: Tensor, k: float):
     flat_x = x.view(-1)
     flat_abs_x = flat_x.abs()
     values, indices = torch.topk(flat_abs_x, num_to_zero, largest=False)
+
     flat_x.scatter_(dim=0, index=indices, src=torch.zeros_like(values))
-
     flat_abs_x = flat_x.abs()
-    bmt.print_rank('threshold = {:.3e}'.format(flat_abs_x[flat_abs_x > 1e-18].min()))
-    return flat_x.view_as(x), (flat_abs_x < 1e-18).float().mean()
+    mask = flat_abs_x < 1e-18
+    return mask.view_as(x)
 
-
-class SparseDragonfly(Dragonfly):
-    def __init__(self, config: DragonflyConfig):
+class SparseMiniCPMForCausalLM(MiniCPMForCausalLM):
+    def __init__(self, config: MiniCPMConfig):
         super().__init__(config)
-        self.intermedia: Dict[int, Tensor] = {}
-        self.pre_intermedia: Dict[int, Tensor] = {}
-        self.threshold_per_layer: Dict[int, Tensor] = {} # The values are single-value Tensors (size=1)
+        self.config: MiniCPMConfig
+
+        self.sparse_activate = False
         self.prune_strategy = 'none'
         self.prune_arg: float = None
-        self.sparse_activate = False
-        self.sparsity_by_layer = {}
-        self.save_intermedia = True
-        self.save_pre_intermedia = False
+        self.neuron_thresholds_by_layer: Dict[int, Tensor] = {} # dim_ff,
 
-        self.activation_count_per_neuron = torch.zeros(config.num_layers, config.dim_ff).cuda()
-        self.tokens_count_all = 0
+        self.intermedia: Dict[int, Tensor] = {}
+        self.save_intermedia = False
 
+        self.activation_by_layer: Dict[int, Tensor] = {}
+        
         for name, module in self.named_modules():
-            # for intermedia
-            if name.endswith('w_out'):
-                assert(isinstance(module, NormalLinear))
+            if name.endswith('mlp'):
+                assert(isinstance(module, VanillaMLP))
                 layer_id = int(name.split('.')[2])
                 setattr(module, 'layer_id', layer_id)
-                setattr(module, 'old_forward', module.forward)
 
-                def new_forward(module_self: NormalLinear, x: Tensor):
-                    lid = getattr(module_self, 'layer_id')
+                def new_forward(mlp_self: VanillaMLP, x: Tensor): 
+                    assert not mlp_self.config.pretraining_tp > 1
+                    lid = getattr(mlp_self, 'layer_id')
+
+                    gate_score = mlp_self.act_fn(mlp_self.gate_proj(x))
+                    x = gate_score * mlp_self.up_proj(x)
                     if self.save_intermedia:
-                        self.intermedia[lid] = x.clone()
-                    if self.sparse_activate and self.prune_strategy == 'cett':
-                        norm_x: Tensor = x.abs() * module_self.weight.view(-1, x.size(-1)).norm(dim=0)  # bs, n, dim_ff
-                        mask = norm_x < self.threshold_per_layer[lid]
-                        self.sparsity_by_layer[lid] = mask.float().mean()
-                        x[mask] = 0.
-                    x: Tensor = getattr(module_self, 'old_forward')(x)
-                    return x
-                setattr(module, 'forward', types.MethodType(new_forward, module))
+                        self.intermedia[lid] = x.clone().detach()
 
-            # for pre_intermedia
-            if name.endswith('w_in'):
-                assert(isinstance(module, DenseGatedACT))
-                layer_id = int(name.split('.')[2])
-                setattr(module, 'layer_id', layer_id)
-
-                def new_forward(module_self: DenseGatedACT, x: Tensor):
-                    lid = getattr(module_self, 'layer_id')
-                    pre_score: Tensor = module_self.w_0(x)
-                    if self.save_pre_intermedia:
-                        self.pre_intermedia[lid] = pre_score.clone()
-                    gate_score = module_self.act(pre_score)
                     if self.sparse_activate:
-                        if self.prune_strategy == 'topk':
-                            gate_score, sparsity = prune_topk(gate_score, self.prune_arg)
+                        if self.prune_strategy == 'pplp' or self.prune_strategy == 'cett':
+                            assert lid in self.neuron_thresholds_by_layer, "Please call `set_thresholds` firstly."
+                            mask = x.abs() < self.neuron_thresholds_by_layer[lid] # bs, n, dim_ff
+                        elif self.prune_strategy == 'topk':
+                            mask = prune_topk(gate_score, self.prune_arg)
                         elif self.prune_strategy == 'fat':
-                            gate_score, sparsity = prune_fat(gate_score, self.prune_arg)
+                            mask = prune_fat(gate_score, self.prune_arg)
                         else:
-                            sparsity = 0.
-                        self.sparsity_by_layer[lid] = sparsity
-                        
-                    x = module_self.w_1(x)
-                    x = gate_score * x
-                    return x
-                setattr(module, 'forward', types.MethodType(new_forward, module))
+                            assert False
 
+                        self.activation_by_layer[lid] = 1 - mask.float().mean(dim=-1) # bs, n
+                        x[mask] = 0.
+
+                    down_proj = mlp_self.down_proj(x)
+                    return down_proj
+
+                setattr(module, 'forward', types.MethodType(new_forward, module))
+    
     def set_sparse_activate(self, value: bool):
         self.sparse_activate = value
 
-    # only avaliable when self.sparse_activate == True
-    def get_sparsity_after_inference(self):
-        return sum(self.sparsity_by_layer[lid] for lid in range(self.config.num_layers)) / self.config.num_layers
+    def get_activation_data(self) -> Tensor:
+        return torch.cat(
+            [self.activation_by_layer[lid].unsqueeze(0) for lid in range(self.config.num_hidden_layers)],
+            dim=0
+        ) # num_layers, bs, n
 
-    def calc_sparsity_zero(self, att_mask: Tensor):
-        """
-        calc sparsity for cett_upper_bound = 0
-        """
-        sparsity_per_layer = []
+    def set_thresholds(self, thresholds_list: List[float]) -> None:
+        assert len(thresholds_list) == self.config.num_hidden_layers
+
+        for name, module in self.named_modules():
+            if name.endswith('mlp'):
+                assert(isinstance(module, VanillaMLP))
+                layer_id = int(name.split('.')[2])
+                out_norm = module.down_proj.weight.norm(dim=0)
+                self.neuron_thresholds_by_layer[layer_id] = thresholds_list[layer_id] / out_norm
+
+    def calc_thresholds_given_cett(
+        self,
+        cett: float,
+        att_mask: Tensor, # bs, n
+    ) -> List[float]:
+        thresholds_list = []
         state_dict = self.state_dict()
-        
+        att_mask = att_mask.to(torch.bool)
         with torch.no_grad():
-            for lid in range(self.config.num_layers):
-                weight: Tensor = state_dict[f"encoder.layers.{lid}.ffn.ffn.w_out.weight"].float().cuda()  # dim_model, dim_ff
-                activate_value = self.intermedia[lid].float() # bs, n, dim_ff
-                activate_value = activate_value[att_mask] # m=sum(att_mask), dim_ff
-                norm: Tensor = activate_value.abs() * weight.norm(dim=0)  # m, dim_ff
-
-                sparse_ratio = torch.sum(norm < 1e-7) / norm.numel()
-                sparse_ratio = bmt.sum_loss(sparse_ratio)
-
-                bmt.print_rank('layer: {:2d}, sparse ratio: {:.3f}'.format(lid, sparse_ratio))
-                sparsity_per_layer.append(sparse_ratio)
-
-                self.threshold_per_layer[lid] = 1e-7
-        
-        return bmt.sum_loss(sum(sparsity_per_layer) / len(sparsity_per_layer)).item()
-
-    def calc_sparsity(
-            self,
-            cett_upper_bound: float,
-            att_mask: Tensor, # bs, n
-        ) -> float:
-        if cett_upper_bound < 1e-9:
-            return self.calc_sparsity_zero(att_mask)
-
-        sparsity_per_layer = []
-        state_dict = self.state_dict()
-        with torch.no_grad():
-            for lid in range(self.config.num_layers):
-                weight: Tensor = state_dict[f"encoder.layers.{lid}.ffn.ffn.w_out.weight"].float().cuda()  # dim_model, dim_ff
+            for lid in range(self.config.num_hidden_layers):
+                weight: Tensor = state_dict[f"model.layers.{lid}.mlp.down_proj.weight"].float().cuda()  # dim_model, dim_ff
  
                 # intermedia values
                 activate_value = self.intermedia[lid].float() # bs, n, dim_ff
@@ -150,10 +114,9 @@ class SparseDragonfly(Dragonfly):
 
                 # generate threshold candidates
                 num_thresholds = 65536
-                min_value = bmt.distributed.all_reduce(norm.min(), op='min')
-                max_value_this_rank = norm.view(-1)[::norm.numel() // num_thresholds].quantile(0.99)
-                max_value = bmt.distributed.all_reduce(max_value_this_rank, op='max')
-                thresholds = torch.linspace(min_value, max_value, int(num_thresholds)) # sum(m*dim_ff) across all gpus
+                min_value = norm.min()
+                max_value = norm.view(-1)[::max(norm.numel() // num_thresholds, 1)].quantile(0.99) # drop the extreme values
+                thresholds = torch.linspace(min_value, max_value, int(num_thresholds))
 
                 # original result of FeedForward
                 x = torch.matmul(activate_value, weight.t()) # m, dim_model
@@ -169,38 +132,11 @@ class SparseDragonfly(Dragonfly):
                     tiny_activate_value = activate_value.clone() # m, dim_ff
                     tiny_activate_value[norm > t] = 0.
                     difference = torch.matmul(tiny_activate_value, weight.t()) # m, dim_model
-                    cett = torch.mean(difference.norm(dim=-1) / norm_x)
-                    cett = bmt.distributed.all_reduce(cett, op='sum') / bmt.world_size()
-                    
-                    if cett > cett_upper_bound:
+                    cett_for_this_t = torch.mean(difference.norm(dim=-1) / norm_x)
+                    if cett_for_this_t > cett:
                         right = mid
                     else:
                         left = mid + 1
+                thresholds_list.append(float(thresholds[left - 1]))
 
-                t = thresholds[left - 1]
-                tiny_activate_value = activate_value.clone() # m, dim_ff
-                tiny_activate_value[norm > t] = 0.
-                difference = torch.matmul(tiny_activate_value, weight.t()) # m, dim_model
-
-                sparse_ratio = torch.sum(norm < t) / norm.numel()
-                sparse_ratio = bmt.sum_loss(sparse_ratio)
-                real_cett = torch.mean(difference.norm(dim=-1) / norm_x)
-                real_cett = bmt.sum_loss(real_cett)
-
-                self.activation_count_per_neuron[lid] += bmt.distributed.all_reduce(
-                    torch.sum(norm > t, dim=0) * 1.,
-                    op='sum'
-                )
-
-                bmt.print_rank('layer: {:2d}, threshold: {:.2e}, sparse ratio: {:.3f}, real cett: {:.3f}'.format(
-                        lid, t, sparse_ratio, real_cett))
-
-                sparsity_per_layer.append(sparse_ratio)
-                self.threshold_per_layer[lid] = t
-
-        self.tokens_count_all += bmt.distributed.all_reduce(
-            att_mask.sum(),
-            op='sum'
-        ).item()
-        
-        return bmt.sum_loss(sum(sparsity_per_layer) / len(sparsity_per_layer)).item()
+        return thresholds_list

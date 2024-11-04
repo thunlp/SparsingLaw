@@ -1,0 +1,2 @@
+from .modeling_minicpm import MiniCPMForCausalLM
+from .configuration_minicpm import MiniCPMConfig

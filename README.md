@@ -27,9 +27,9 @@ Finally, at similar width-depth ratios, we surprisingly find that the limit valu
 
 To enhance the reproducibility of our work, in this Github repository, we open-source the following materials:
 
-- The pre-trained checkpoints (before the decay stage) mentioned in our paper, with five different scales (i.e., 0.1B, 0.2B, 0.4B, 0.8B, and 1.2B) as well as 2 distinct activation functions (i.e., ReLU and SiLU). These checkpoints are most frequently used in our experimental analyses. You can download them on [Huggingface](TODO).
+- The pre-trained checkpoints (before the decay stage) mentioned in our paper, with five different scales (i.e., 0.1B, 0.2B, 0.4B, 0.8B, and 1.2B) as well as 2 distinct activation functions (i.e., ReLU and SiLU). These checkpoints are most frequently used in our experimental analyses. You can download them on [Huggingface](https://huggingface.co/SparseLLM).
 
-- The demos for applying different sparsity metrics, including Top-$`k`$, FAT-$`\epsilon`$, and PPL-$`p\%`$ to pre-trained checkpoints.
+- The codes for applying different sparsity metrics, including Top-$`k`$, FAT-$`\epsilon`$, and PPL-$`p\%`$ to pre-trained checkpoints. As it is not convenient for us to open-source the datasets, we provide corresponding demos to evaluate the sparsity level on an input toy dataset.
 
 - Steps to evaluate the sparsely-activated checkpoints on task-specific benchmarks.
 
@@ -41,19 +41,15 @@ Run `pip install -r requirements.txt` to install the required Python packages.
 
 ## Sparsity Metrics
 
-To run scripts, first copy the corresponding `*.sh` files into the `src` directory, and then appropriately set the environment variables (e.g., `model`, `dataset`, etc.).
+To run scripts, first copy the corresponding `*.sh` files into the `src` directory, and then appropriately set the environment variables (e.g., `model_path`, `input_file`, etc.).
 
 ### Baseline Sparsity Metrics
 
 In this section, we mainly introduce how to measure the activation sparsity of a single checkpoint using the two baseline sparsity metrics mentioned in Section 4.1 of our paper: Top-$`k`$ and FAT-$`\epsilon`$.
 
-**TODO: write a demo to measure the sparsity of an HF checkpoint on a specific case sentence.**
-
-First, set the following environment variables:
-- `dataset`: The name of the dataset.
-- `model`: The name of the model (e.g. "0.1b_relu").
-- `load_path`: The path to the model checkpoint folder.
-- `tokenizer_path`: The path to the tokenizer file.
+First, set the following variables in `calc_activation.sh`:
+- `model_path`: The path to the model checkpoint folder, which can be loaded by Huggingface.
+- `input_file`: The path to the text file as the input toy dataset of model.
 - `prune_strategy`: Must be one of the following:
     - "fat": Corresponding to FAT-$`\epsilon`$ sparsity.
     - "topk": Corresponding to Top-$`k`$ sparsity.
@@ -63,28 +59,33 @@ First, set the following environment variables:
 
 Finally, run the following command:
 ```
-bash run_inspect.sh
+bash calc_activation.sh
 ```
+
+The average activation and the PPL ratio (increase in perplexity) will be printed to screen, and an image for visualized results will be saved to `outputs/`.
 
 ### Our PPL-$`p\%`$ Sparsity Metric
 
-In this section, we introduce how to apply the PPL-$`p\%`$ sparsity metric, proposed in our paper, to a list of checkpoints obtained during the pre-training stage. This checkpoint list is stored under the same directory and contains one or more checkpoints.
+In this section, we introduce how to apply the PPL-$`p\%`$ sparsity metric, proposed in our paper, to a model checkpoint.
 
-**TODO: write a demo to measure the sparsity of an HF checkpoint list on a specific case sentence.**
-
-First, set the following environment variables:
-- `dataset`: The name of the dataset.
-- `model`: The name of the model (e.g. "0.1b_relu").
-- `tokenizer_path`: The path to the tokenizer file.
-- `save_path`: The path to where the checkpoints are saved.
-- `target_ppl_ratio`: $`1+p\%`$ for PPL-$`p\%`$ sparsity (e.g. target_ppl_ratio=1.01 for PPL-$`1\%`$ sparsity).
-
-Next, enter the list of checkpoints that need to be computed into `get_ckpt_list.sh` in advance.
+First, set the following variables in `calc_activation.sh`:
+- `model_path`: The path to the model checkpoint folder, which can be loaded by Huggingface.
+- `input_file`: The path to the text file as the input toy dataset of model.
+- `prune_strategy`: Must be "pplp"
+- `prune_arg`: $`1+p\%`$ for PPL-$`p\%`$ sparsity (e.g. prune_arg=1.01 for PPL-$`1\%`$ sparsity).
 
 Finally, run the following command:
 ```
-bash calc_sparsity.sh
+bash calc_activation.sh
 ```
+
+**In addition to the information mentioned in the previous subsection, the thresholds for each layer will also be printed, which can be employed in evaluation.**
+
+### Sample
+
+The resulting activation ratios within our 0.8B ReLU-activated model, using three different sparsity metrics on the sample text, are shown in the figure below.
+
+![](figs/sample.jpg)
 
 ## Evaluation
 
@@ -92,27 +93,13 @@ In this section, we discuss how to evaluate a specific checkpoint (generally aft
 
 ### Calculate the thresholds of each layer for evaluation
 
-Notably, our evaluation is conducted under a specific PPL-$`p\%`$ sparsity level. The first step is to calculate the adaptive thresholds of each layer under the PPL increase ratio of $`p\%`$ as a preliminary step for evaluation.
-
-**TODO: write a demo to calculate the layer-wise thresholds of an HF checkpoint on a specific case sentence.**
-
-First, set the following environment variables:
-- `dataset`: The name of the dataset.
-- `model`: The name of the model (e.g. "0.1b_relu").
-- `load_path`: The path to the model checkpoint folder.
-- `tokenizer_path`: The path to the tokenizer file.
-- `target_ppl_ratio`: $`1+p\%`$ for PPL-$`p\%`$ sparsity (e.g. target_ppl_ratio=1.01 for PPL-$`1\%`$ sparsity).
-
-Then, run the following command:
-```
-bash calc_threshold_for_each_layer.sh
-```
+Notably, our evaluation is conducted under a specific PPL-$`p\%`$ sparsity level. The first step is to calculate the adaptive thresholds of each layer under the PPL increase ratio of $`p\%`$ as a preliminary step for evaluation. This is done as highlighted in bold in the [previous section](#our-ppl-p-sparsity-metric).
 
 ### Evaluation with UltraEval
 
 We use the `sparsing_law` branch of [UltraEval](https://github.com/OpenBMB/UltraEval/tree/sparsing_law) to evaluate our models. Remember to checkout to this branch rather than `main`.
 
-To support inference under PPL-$`p\%`$ sparsity setting during evaluation, the `FFNBlock` in the Huggingface codes of the model architecture should be modified as shown below. Note that the environment variable `thresholds` is obtained in the previous step with `calc_threshold_for_each_layer.sh`, and `mode` is set to `sparse` for all PPL-$`p\%`$ settings.
+To support inference under PPL-$`p\%`$ sparsity setting during evaluation, the `FFNBlock` in the Huggingface codes of the model architecture should be modified as shown below. Note that the environment variable `thresholds` is obtained in the previous step, and `mode` is set to `sparse` for all PPL-$`p\%`$ settings.
 
 ```python
 def forward(self, x: torch.Tensor): 
