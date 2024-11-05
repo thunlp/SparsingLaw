@@ -1,6 +1,6 @@
 # Sparsing Law: Towards Large Language Models with Greater Activation Sparsity
 
-The open-source materials for paper *Sparsing Law: Towards Large Language Models with Greater Activation Sparsity* ([paper link](TODO)).
+The open-source materials for paper *Sparsing Law: Towards Large Language Models with Greater Activation Sparsity* ([paper link](https://arxiv.org/pdf/2411.02335)).
 
 ## Citation
 
