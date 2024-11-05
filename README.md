@@ -4,6 +4,18 @@ The open-source materials for paper *Sparsing Law: Towards Large Language Models
 
 ## Citation
 
+Please kindly cite using the following BibTeX:
+
+```bibtex
+@article{luo2024sparsinglaw,
+  title={{Sparsing Law}: Towards Large Language Models with Greater Activation Sparsity},
+  author={Yuqi Luo and Chenyang Song and Xu Han and Yingfa Chen and Chaojun Xiao and Zhiyuan Liu and Maosong Sun},
+  year={2024},
+  journal={arXiv preprint arXiv:2411.02335},
+  url={https://arxiv.org/pdf/2411.02335.pdf}
+}
+```
+
 ## Quick Links
 
 [Paper Abstract](#paper-abstract)  
