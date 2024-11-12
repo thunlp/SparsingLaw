@@ -22,7 +22,8 @@ Please kindly cite using the following BibTeX:
 [Repository Overview](#repository-overview)  
 [Requirements](#requirements)  
 [Sparsity Metrics](#sparsity-metrics)  
-[Evaluation](#evaluation)
+[Evaluation](#evaluation)  
+[Model Links](#model-links)
 
 ## Paper Abstract
 
@@ -39,7 +40,7 @@ Finally, at similar width-depth ratios, we surprisingly find that the limit valu
 
 To enhance the reproducibility of our work, in this Github repository, we open-source the following materials:
 
-- The pre-trained checkpoints (before the decay stage) mentioned in our paper, with five different scales (i.e., 0.1B, 0.2B, 0.4B, 0.8B, and 1.2B) as well as 2 distinct activation functions (i.e., ReLU and SiLU). These checkpoints are most frequently used in our experimental analyses. You can download them on [Huggingface](https://huggingface.co/SparseLLM).
+- The pre-trained checkpoints (before the decay stage) mentioned in our paper, with five different scales (i.e., 0.1B, 0.2B, 0.4B, 0.8B, and 1.2B) as well as 2 distinct activation functions (i.e., ReLU and SiLU). These checkpoints are most frequently used in our experimental analyses. You can download them on [Huggingface](#model-links).
 
 - The codes for applying different sparsity metrics, including Top-$`k`$, FAT-$`\epsilon`$, and PPL-$`p\%`$ to pre-trained checkpoints. As it is not convenient for us to open-source the datasets, we provide corresponding demos to evaluate the sparsity level on an input toy dataset.
 
@@ -132,8 +133,23 @@ def forward(self, x: torch.Tensor):
 
 After appropriately setting the above two environment variables, just run the following codes for evaluation:
 ```
+
+
 bash eval_entrance.sh /path/to/the/huggingface/model/ 8 piqa,siqa,hellaswag,winogrande,copa,boolq,agieval ppl
 bash eval_entrance.sh /path/to/the/huggingface/model/ 8 humaneval,mbpp,lambada,tydiqa,gsm8k,mmlu,bbh gen
 ```
 
 Finally, you can obtain the evaluation results under `/path/to/the/huggingface/model/eval_results/`.
+
+## Model Links
+
+You can download the checkpoints of our model from the links below.
+
+|      | Relu-activated                                               | SiLU-activated                                               |
+| ---- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 0.1B | [0.1b-relu](https://huggingface.co/SparseLLM/sparsing-law-0.1b-relu) | [0.1b-silu](https://huggingface.co/SparseLLM/sparsing-law-0.1b-silu) |
+| 0.2B | [0.2b-relu](https://huggingface.co/SparseLLM/sparsing-law-0.2b-relu) | [0.2b-silu](https://huggingface.co/SparseLLM/sparsing-law-0.2b-silu) |
+| 0.4B | [0.4b-relu](https://huggingface.co/SparseLLM/sparsing-law-0.4b-relu) | [0.4b-silu](https://huggingface.co/SparseLLM/sparsing-law-0.4b-silu) |
+| 0.8B | [0.8b-relu](https://huggingface.co/SparseLLM/sparsing-law-0.8b-relu) | [0.8b-silu](https://huggingface.co/SparseLLM/sparsing-law-0.8b-silu) |
+| 1.2B | [1.2b-relu](https://huggingface.co/SparseLLM/sparsing-law-1.2b-relu) | [1.2b-silu](https://huggingface.co/SparseLLM/sparsing-law-1.2b-silu) |
+
