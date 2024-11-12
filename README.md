@@ -133,8 +133,6 @@ def forward(self, x: torch.Tensor):
 
 After appropriately setting the above two environment variables, just run the following codes for evaluation:
 ```
-
-
 bash eval_entrance.sh /path/to/the/huggingface/model/ 8 piqa,siqa,hellaswag,winogrande,copa,boolq,agieval ppl
 bash eval_entrance.sh /path/to/the/huggingface/model/ 8 humaneval,mbpp,lambada,tydiqa,gsm8k,mmlu,bbh gen
 ```
